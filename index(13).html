@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi quotidien — Sasha</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #f5f4f0;
+  --surface:  #ffffff;
+  --border:   #e2e0d8;
+  --border2:  #ccc9be;
+  --text:     #1c1b18;
+  --muted:    #6b6860;
+  --hint:     #9c9a92;
+  --indigo:   #4338ca;
+  --indigo2:  #3730a3;
+  --indigobg: #eef2ff;
+  --green:    #166534;
+  --greenbg:  #dcfce7;
+  --red:      #991b1b;
+  --redbg:    #fee2e2;
+  --amber:    #92400e;
+  --amberbg:  #fef3c7;
+  --blue:     #1e40af;
+  --bluebg:   #dbeafe;
+  --radius:   10px;
+  --radius-sm: 6px;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+body { background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+button { font-family: inherit; cursor: pointer; }
+input { font-family: inherit; }
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.app { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+/* ── Header ───────────────────────────────────────────────────── */
+.header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 1.5rem; }
+.header-title { font-size: 22px; font-weight: normal; letter-spacing: -0.5px; color: var(--text); }
+.header-sub { font-size: 12px; color: var(--muted); margin-top: 3px; font-family: system-ui, sans-serif; }
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.date-row { display: flex; align-items: center; gap: 8px; }
+.date-row label { font-size: 12px; color: var(--muted); font-family: system-ui, sans-serif; }
+.date-row input[type=date] { font-size: 12px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); color: var(--text); outline: none; font-family: system-ui, sans-serif; }
+.date-row input[type=date]:focus { border-color: var(--indigo); }
+.sync { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-family: system-ui, sans-serif; }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
+.sync-dot.ok { background: #16a34a; }
+.sync-dot.error { background: #dc2626; }
+.sync-dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; background: var(--border); border-radius: var(--radius); padding: 3px; width: fit-content; }
+.tab { font-size: 12px; padding: 7px 18px; cursor: pointer; color: var(--muted); border-radius: 8px; border: none; background: transparent; font-weight: normal; transition: all .15s; font-family: system-ui, sans-serif; letter-spacing: .02em; }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.tab:hover:not(.active) { color: var(--text); }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── Cards ────────────────────────────────────────────────────── */
+.card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.25rem; margin-bottom: 1rem; }
+.section-header { font-size: 10px; font-weight: normal; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; padding: 3px 0; margin: 1.25rem 0 6px; border-bottom: 1px solid var(--border); font-family: system-ui, sans-serif; }
+
+/* ── Contact manquant ─────────────────────────────────────────── */
+.no-contact-bar { background: var(--amberbg); border: 1px solid #fcd34d; border-radius: var(--radius); padding: .75rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: system-ui, sans-serif; font-size: 12px; color: var(--amber); }
+.no-contact-bar button { font-size: 11px; padding: 4px 12px; border-radius: var(--radius-sm); border: 1px solid #f59e0b; background: #fffbeb; color: var(--amber); cursor: pointer; font-family: system-ui, sans-serif; }
+.no-contact-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; font-family: system-ui, sans-serif; font-size: 12px; color: var(--muted); }
+.toggle-wrap { position: relative; width: 36px; height: 20px; }
+.toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider { position: absolute; inset: 0; background: var(--border2); border-radius: 999px; cursor: pointer; transition: .2s; }
+.toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: .2s; }
+.toggle-wrap input:checked + .toggle-slider { background: var(--indigo); }
+.toggle-wrap input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+/* ── Progress ─────────────────────────────────────────────────── */
+.progress-bar { height: 3px; background: var(--border); border-radius: 999px; margin-bottom: 5px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--indigo); border-radius: 999px; transition: width .3s; }
+.progress-label { font-size: 11px; color: var(--hint); text-align: right; margin-bottom: 1rem; font-family: system-ui, sans-serif; }
+
+/* ── KPI rows ─────────────────────────────────────────────────── */
+.kpi-row { display: grid; grid-template-columns: 1fr 130px; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid #f5f4f0; }
+.kpi-row:last-child { border-bottom: none; }
+.kpi-row.dimmed { opacity: .4; pointer-events: none; }
+.kpi-label { font-size: 13px; color: var(--text); line-height: 1.4; }
+.kpi-hint { font-size: 11px; color: var(--hint); margin-top: 2px; font-family: system-ui, sans-serif; }
+.kpi-new { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bluebg); color: var(--blue); margin-left: 5px; font-family: system-ui, sans-serif; vertical-align: middle; }
+.kpi-info { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--border); color: var(--muted); margin-left: 5px; font-family: system-ui, sans-serif; vertical-align: middle; }
+.kpi-thera { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--indigobg); color: var(--indigo); margin-left: 5px; font-family: system-ui, sans-serif; vertical-align: middle; }
+.btn-group { display: flex; gap: 4px; justify-content: flex-end; }
+.btn-onz { padding: 6px 11px; font-size: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border2); cursor: pointer; background: var(--surface); color: var(--muted); transition: all .1s; font-family: system-ui, sans-serif; font-weight: normal; }
+.btn-onz:hover { border-color: var(--border2); color: var(--text); }
+.btn-onz.sel-O { background: var(--greenbg); color: var(--green); border-color: #86efac; }
+.btn-onz.sel-N { background: var(--redbg); color: var(--red); border-color: #fca5a5; }
+.btn-onz.sel-Q { background: var(--amberbg); color: var(--amber); border-color: #fcd34d; }
+
+/* ── Action bar ───────────────────────────────────────────────── */
+.action-bar { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem; }
+.btn-save { padding: 10px 24px; font-size: 13px; border-radius: var(--radius); border: none; cursor: pointer; background: var(--indigo); color: #fff; transition: all .15s; font-family: system-ui, sans-serif; }
+.btn-save:hover { background: var(--indigo2); }
+.btn-save:disabled { background: #a5b4fc; cursor: not-allowed; }
+.btn-secondary { padding: 10px 18px; font-size: 13px; border-radius: var(--radius); border: 1px solid var(--border2); cursor: pointer; background: var(--surface); color: var(--muted); transition: all .15s; font-family: system-ui, sans-serif; }
+.btn-secondary:hover { background: var(--bg); }
+
+/* ── Journal ──────────────────────────────────────────────────── */
+.toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+.btn-tool { padding: 7px 14px; font-size: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border2); cursor: pointer; background: var(--surface); color: var(--text); font-family: system-ui, sans-serif; transition: all .15s; }
+.btn-tool:hover { background: var(--bg); }
+.btn-tool.danger { color: #dc2626; border-color: #fca5a5; }
+.btn-tool.danger:hover { background: var(--redbg); }
+.import-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 1.25rem; text-align: center; color: var(--muted); font-size: 12px; cursor: pointer; transition: all .2s; margin-bottom: 1rem; font-family: system-ui, sans-serif; }
+.import-zone:hover { border-color: var(--indigo); color: var(--indigo); background: var(--indigobg); }
+.journal-wrap { overflow-x: auto; }
+.journal-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.journal-table th { padding: 7px 4px; text-align: center; font-weight: normal; font-size: 9px; color: var(--muted); border-bottom: 2px solid var(--border); background: var(--bg); white-space: nowrap; font-family: system-ui, sans-serif; letter-spacing: .04em; }
+.journal-table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid #f5f4f0; color: var(--text); font-family: system-ui, sans-serif; }
+.journal-table tr:hover td { background: var(--bg); }
+.cell-O { color: var(--green); font-weight: bold; }
+.cell-N { color: var(--red); font-weight: bold; }
+.cell-Q { color: var(--amber); }
+.del-btn { font-size: 9px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; background: var(--surface); color: var(--hint); }
+.del-btn:hover { border-color: #fca5a5; color: #dc2626; }
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--hint); font-size: 13px; font-family: system-ui, sans-serif; }
+
+/* ── Import preview modal ─────────────────────────────────────── */
+.import-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; font-family: system-ui, sans-serif; }
+.import-preview h3 { font-size: 13px; font-weight: 500; margin-bottom: 10px; color: var(--text); }
+.import-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.import-stat { font-size: 12px; padding: 4px 10px; border-radius: var(--radius-sm); }
+.import-errors { font-size: 11px; color: var(--red); margin-top: 8px; max-height: 120px; overflow-y: auto; }
+.import-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ── Stats ────────────────────────────────────────────────────── */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.stat-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: system-ui, sans-serif; }
+.stat-val { font-size: 24px; font-weight: normal; color: var(--text); letter-spacing: -1px; }
+.stat-sub { font-size: 10px; color: var(--hint); margin-top: 2px; font-family: system-ui, sans-serif; }
+.bar-row { display: grid; grid-template-columns: 36px 1fr 80px 50px 50px; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f5f4f0; font-size: 12px; font-family: system-ui, sans-serif; }
+.bar-row:last-child { border-bottom: none; }
+.bar-track { background: var(--border); border-radius: 999px; height: 5px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; }
+
+/* ── Corrélations ─────────────────────────────────────────────── */
+.corr-group { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.corr-group-title { font-size: 11px; font-weight: normal; padding: 3px 10px; border-radius: var(--radius-sm); margin-bottom: 10px; letter-spacing: .04em; display: inline-block; font-family: system-ui, sans-serif; }
+.corr-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #f5f4f0; font-size: 12px; gap: 12px; font-family: system-ui, sans-serif; }
+.corr-row:last-child { border-bottom: none; }
+.corr-label { color: var(--text); flex: 1; }
+.corr-pct { font-weight: bold; font-size: 13px; white-space: nowrap; }
+.badge-na { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; background: var(--indigobg); color: var(--indigo); }
+.badge-prov { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; background: var(--amberbg); color: var(--amber); margin-left: 6px; }
+
+/* ── Dashboard ────────────────────────────────────────────────── */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.gauge-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; text-align: center; }
+.gauge-label { font-size: 11px; color: var(--muted); font-family: system-ui, sans-serif; margin-bottom: 8px; }
+.gauge-svg { display: block; margin: 0 auto; }
+.gauge-val { font-size: 20px; margin-top: 4px; letter-spacing: -1px; }
+.gauge-sub { font-size: 10px; color: var(--hint); margin-top: 2px; font-family: system-ui, sans-serif; }
+.kpi-day-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.kpi-day-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.kpi-day-label { font-size: 11px; color: var(--muted); font-family: system-ui, sans-serif; margin-bottom: 4px; }
+.kpi-day-val { font-size: 26px; letter-spacing: -1px; }
+.kpi-day-trend { font-size: 11px; color: var(--muted); font-family: system-ui, sans-serif; margin-top: 2px; }
+.trend-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+.trend-title { font-size: 12px; color: var(--muted); font-family: system-ui, sans-serif; margin-bottom: 1rem; letter-spacing: .04em; text-transform: uppercase; }
+.heatmap-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
+.hm-cell { width: 26px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; font-weight: bold; cursor: default; position: relative; font-family: system-ui, sans-serif; }
+.hm-cell:hover .hm-tip { display: block; }
+.hm-tip { display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 5px; white-space: nowrap; z-index: 10; font-family: system-ui, sans-serif; font-weight: normal; }
+.alert-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+.alert-title { font-size: 11px; color: var(--muted); font-family: system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 10px; }
+.alert-item { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f4f0; font-size: 12px; font-family: system-ui, sans-serif; }
+.alert-item:last-child { border-bottom: none; }
+.alert-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+.alert-red    { background: var(--redbg);   color: #dc2626; }
+.alert-orange { background: var(--amberbg); color: #d97706; }
+.alert-green  { background: var(--greenbg); color: #16a34a; }
+.weekly-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: system-ui, sans-serif; }
+.weekly-table th { padding: 6px 8px; text-align: left; font-weight: normal; font-size: 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.weekly-table td { padding: 6px 8px; border-bottom: 1px solid #f5f4f0; color: var(--text); }
+.weekly-table tr:last-child td { border-bottom: none; }
+.corr-top { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+.corr-top-title { font-size: 11px; color: var(--muted); font-family: system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 10px; }
+.corr-bar-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f5f4f0; font-size: 12px; font-family: system-ui, sans-serif; }
+.corr-bar-row:last-child { border-bottom: none; }
+.corr-bar-label { flex: 1; color: var(--text); }
+.corr-bar-track { width: 80px; background: var(--border); border-radius: 999px; height: 6px; overflow: hidden; flex-shrink: 0; }
+.corr-bar-fill { height: 100%; border-radius: 999px; }
+.no-alert { text-align: center; padding: 1.25rem; color: var(--hint); font-size: 12px; font-family: system-ui, sans-serif; }
+.version-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: 10px; background: var(--indigobg); color: var(--indigo); font-family: system-ui, sans-serif; }
+
+/* ── Toast ────────────────────────────────────────────────────── */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 20px; border-radius: var(--radius); font-size: 12px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 9999; font-family: system-ui, sans-serif; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Header ── -->
+  <div class="header">
+    <div>
+      <h1 class="header-title">Suivi quotidien — Sasha</h1>
+      <div class="header-sub">Saisie du matin · bilan de la nuit et de la veille</div>
+    </div>
+    <div class="header-right">
+      <div class="date-row">
+        <label>Date du bilan</label>
+        <input type="date" id="dateInput">
+      </div>
+      <div class="sync">
+        <div class="sync-dot" id="syncDot"></div>
+        <span id="syncLabel">Connexion…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ── -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('saisie',this)">Saisie du jour</button>
+    <button class="tab" onclick="switchTab('journal',this)">Journal</button>
+    <button class="tab" onclick="switchTab('stats',this)">Statistiques</button>
+    <button class="tab" onclick="switchTab('dashboard',this)">Dashboard</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ONGLET SAISIE
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="panel-saisie" class="panel active">
+
+    <!-- Contact toggle -->
+    <div class="no-contact-toggle">
+      <label class="toggle-wrap">
+        <input type="checkbox" id="contactToggle" checked onchange="toggleContact(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+      <span id="contactLabel">Sasha visible ce matin</span>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-label" id="progressLabel">0 / 0 indicateurs remplis</div>
+
+    <div class="section-header">Sommeil</div><div class="card" id="kpi-sommeil"></div>
+    <div class="section-header">Humeur & état observé</div><div class="card" id="kpi-humeur"></div>
+    <div class="section-header">Consommation (perception)</div><div class="card" id="kpi-conso"></div>
+    <div class="section-header">Rendez-vous & soins</div><div class="card" id="kpi-soins"></div>
+    <div class="section-header">Activités & déplacements</div><div class="card" id="kpi-activites"></div>
+    <div class="section-header">Alimentation</div><div class="card" id="kpi-alim"></div>
+
+    <div class="action-bar">
+      <button class="btn-secondary" onclick="resetForm()">Réinitialiser</button>
+      <button class="btn-save" id="btnSave" onclick="saveDay()">Enregistrer cette journée</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ONGLET JOURNAL
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="panel-journal" class="panel">
+    <div class="toolbar">
+      <label class="btn-tool" style="cursor:pointer">
+        Importer CSV
+        <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="handleImport(this)">
+      </label>
+      <button class="btn-tool" onclick="exportCSV()">Exporter CSV</button>
+      <button class="btn-tool" onclick="exportExcel()">Exporter Excel</button>
+      <button class="btn-tool danger" onclick="clearAll()">Effacer tout</button>
+    </div>
+    <div class="import-zone" onclick="document.getElementById('csvImportInput').click()">
+      Cliquez ici ou déposez un fichier CSV pour importer des données passées
+    </div>
+    <div id="import-preview"></div>
+    <div class="card" id="journal-content"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ONGLET STATISTIQUES
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="panel-stats" class="panel">
+    <div id="stats-content"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ONGLET DASHBOARD
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="panel-dashboard" class="panel">
+    <div id="dashboard-content"></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIG SUPABASE
+// ─────────────────────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://txqcurkbzypodeaoqswi.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4cWN1cmtienlwb2RlYW9xc3dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDkyMTIsImV4cCI6MjA5MTIyNTIxMn0.WoIBV2XIIycBn80lB9suviduIqvjyaEzLN-XalGLQPk';
+const HDR = { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DÉFINITION DES 29 ITEMS
+// polarite: 'pos' OUI=bon | 'neg' NON=bon (OUI inversé) | 'info' contextuel hors score
+// scoreDomaine: inclus dans score domaine
+// hebdo: item hebdomadaire — exclu des corrélations J/J
+// naExpected: ? est réponse normale si condition absente
+// therapeuteOnly: visible dans rapport thérapeutes seulement (M4)
+// version: '1.0' existant | '2.0' nouveau
+// ─────────────────────────────────────────────────────────────────────────────
+const KPIs = [
+  // Sommeil
+  { id:'S1', cat:'sommeil', label:'Couché avant 22h (hors week-end)',          hint:'Règle convenue : 22h00',                          polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'S2', cat:'sommeil', label:'Ordi et téléphone sortis de la chambre',    hint:'Règle maison',                                    polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'S3', cat:'sommeil', label:'Levé avant 9h',                             hint:'Règle convenue : 9h00',                           polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'S4', cat:'sommeil', label:'Douche + prêt avant 10h30',                 hint:'Routine matinale — marqueur auto-soin',           polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'S5', cat:'sommeil', label:'Nuit calme (pas de ronflement inquiétant)', hint:'Ronflement fort = apnée possible',                polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'S6', cat:'sommeil', label:'Alimentation nocturne',                     hint:'OUI = s\'est levé manger pendant la nuit',        polarite:'neg', scoreDomaine:true,  version:'1.0' },
+  { id:'S7', cat:'sommeil', label:'Semble reposé au réveil',                   hint:'Qualité observable — teint, comportement matinal',polarite:'pos', scoreDomaine:true,  version:'2.0' },
+  // Humeur
+  { id:'H1', cat:'humeur',  label:'Semble de bonne humeur / participatif',     hint:'Impression générale observable',                  polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'H2', cat:'humeur',  label:'Visage normal (pas bouffi / gonflé)',        hint:'Signe possible de consommation la veille',        polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'H3', cat:'humeur',  label:'Bonne mémoire / pas de blancs apparents',   hint:'Trous de mémoire = signal clinique',              polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'H4', cat:'humeur',  label:'Communication ouverte avec moi',            hint:'A parlé, échangé spontanément',                   polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'H5', cat:'humeur',  label:'Pas d\'épisode de pleurs / crise émotionnelle', hint:'OUI = journée sans dysrégulation observable', polarite:'pos', scoreDomaine:true,  version:'2.0' },
+  { id:'H6', cat:'humeur',  label:'Énergie suffisante pour ses activités',     hint:'Marqueur clé dépression / hypomanie',             polarite:'pos', scoreDomaine:true,  version:'2.0' },
+  // Consommation
+  { id:'C1', cat:'conso',   label:'Je pense qu\'il n\'a PAS consommé',         hint:'N = consommation perçue · ? = doute',             polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'C2', cat:'conso',   label:'Je SAIS qu\'il n\'a pas consommé',          hint:'O = certitude · N = certitude conso · ? = doute', polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'C3', cat:'conso',   label:'A respecté les règles de cohabitation',     hint:'Hygiène, rangement, cuisine, comportement général',polarite:'pos', scoreDomaine:true,  version:'2.0' },
+  // Soins
+  { id:'M1', cat:'soins',   label:'Rendez-vous médical prévu aujourd\'hui',    hint:'Informatif — condition pour M2',                  polarite:'info',scoreDomaine:false, version:'1.0' },
+  { id:'M2', cat:'soins',   label:'Rendez-vous honoré (si prévu)',             hint:'? si aucun RDV ce jour',                          polarite:'pos', scoreDomaine:true,  version:'1.0', naExpected:true },
+  { id:'M3', cat:'soins',   label:'A pris ses médicaments',                    hint:'Alerte si NON 2 jours consécutifs',               polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'M4', cat:'soins',   label:'Pas d\'effet secondaire / gêne signalé',    hint:'Rapport thérapeutes — hors score global',         polarite:'pos', scoreDomaine:false, version:'2.0', therapeuteOnly:true, naExpected:true },
+  // Activités
+  { id:'A1', cat:'activites',label:'Déplacement à Lausanne aujourd\'hui',      hint:'Contextuel — corrélations',                       polarite:'info',scoreDomaine:false, version:'1.0' },
+  { id:'A2', cat:'activites',label:'Nuit chez sa maman',                       hint:'Contextuel relationnel — corrélations',           polarite:'info',scoreDomaine:false, version:'1.0' },
+  { id:'A3', cat:'activites',label:'Sortie locale (hors Lausanne)',             hint:'Amis, courses, promenade — facteur protecteur',   polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'A4', cat:'activites',label:'A préparé un repas cette semaine',         hint:'Cocher O le jour où c\'est fait',                 polarite:'pos', scoreDomaine:true,  version:'1.0', hebdo:true },
+  { id:'A5', cat:'activites',label:'A passé l\'aspirateur cette semaine',      hint:'Cocher O le jour où c\'est fait',                 polarite:'pos', scoreDomaine:true,  version:'1.0', hebdo:true },
+  { id:'A6', cat:'activites',label:'Nuit chez Sacha ou ailleurs',              hint:'Contextuel — corrélations',                       polarite:'info',scoreDomaine:false, version:'1.0' },
+  { id:'A7', cat:'activites',label:'A pris une initiative (contact, proposition, démarche)', hint:'A cherché le contact, proposé une activité, fait une démarche autonome', polarite:'pos', scoreDomaine:true, version:'2.0' },
+  // Alimentation
+  { id:'AL1',cat:'alim',    label:'N\'a pas mangé dans sa chambre',            hint:'OUI = a mangé dans les espaces communs',          polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'AL2',cat:'alim',    label:'Appétit correct (ni excès ni refus)',       hint:'Extrêmes = signal clinique',                      polarite:'pos', scoreDomaine:true,  version:'1.0' },
+  { id:'AL3',cat:'alim',    label:'Au moins 2 repas pris à heure régulière',   hint:'Régularité alimentaire — facteur protecteur',     polarite:'pos', scoreDomaine:true,  version:'2.0' },
+];
+
+const CAT_MAP = { sommeil:'kpi-sommeil', humeur:'kpi-humeur', conso:'kpi-conso', soins:'kpi-soins', activites:'kpi-activites', alim:'kpi-alim' };
+
+const DOMAINES = {
+  sommeil:   { label:'Sommeil',             color:'#534AB7' },
+  humeur:    { label:'Humeur & état',       color:'#0F6E56' },
+  conso:     { label:'Consommation',        color:'#993C1D' },
+  soins:     { label:'Soins',              color:'#185FA5' },
+  activites: { label:'Activités',          color:'#854F0B' },
+  alim:      { label:'Alimentation',       color:'#3B6D11' },
+};
+
+// Corrélations cliniques provisoires — à valider par l'équipe
+const CORR_GROUPS = [
+  { title:'Signaux de consommation', color:'#7f1d1d', bg:'#fef2f2', statut:'provisoire', items:[
+    { label:'Visite maman → conso perçue J+1',          trigger:'A2', effect:'C1', invert:true  },
+    { label:'Nuit extérieure → conso perçue J+1',       trigger:'A6', effect:'C1', invert:true  },
+    { label:'Visage bouffi → trous mémoire J+1',        trigger:'H2', effect:'H3', invert:true  },
+    { label:'Alimentation nocturne → repas irréguliers J+1', trigger:'S6', effect:'AL3', invert:true },
+    { label:'Ronflement → visage bouffi J+1',           trigger:'S5', effect:'H2', invert:true  },
+  ]},
+  { title:'Cycles dépressifs', color:'#1e3a5f', bg:'#eff6ff', statut:'provisoire', items:[
+    { label:'Communication fermée → mauvaise nuit J+1', trigger:'H4', effect:'S5', invert:true  },
+    { label:'Pas de sortie → humeur négative J+1',      trigger:'A3', effect:'H1', invert:true  },
+    { label:'Médicaments non pris → humeur négative J+1', trigger:'M3', effect:'H1', invert:true },
+    { label:'Médicaments non pris → énergie faible J+1',  trigger:'M3', effect:'H6', invert:true },
+    { label:'Déplacement Lausanne → mauvaise nuit J+1', trigger:'A1', effect:'S5', invert:true  },
+    { label:'Crise émotionnelle → mauvaise nuit J+1',   trigger:'H5', effect:'S5', invert:true  },
+    { label:'Pas reposé → humeur négative ce jour',     trigger:'S7', effect:'H1', invert:true  },
+  ]},
+  { title:'Déclencheurs relationnels', color:'#4c1d95', bg:'#f5f3ff', statut:'provisoire', items:[
+    { label:'Visite maman → communication fermée J+1',  trigger:'A2', effect:'H4', invert:true  },
+    { label:'Visite maman → mauvaise nuit J+1',         trigger:'A2', effect:'S5', invert:true  },
+    { label:'Nuit extérieure → pas reposé J+1',         trigger:'A6', effect:'S7', invert:true  },
+    { label:'Visite maman → énergie faible J+1',        trigger:'A2', effect:'H6', invert:true  },
+    { label:'RDV honoré → humeur positive J+1',         trigger:'M2', effect:'H1', invert:false },
+  ]},
+  { title:'Facteurs de protection', color:'#064e3b', bg:'#f0fdf4', statut:'provisoire', items:[
+    { label:'Repas préparé → humeur positive ce jour',  trigger:'A4', effect:'H1', invert:false },
+    { label:'Sortie extérieure → meilleure nuit J+1',   trigger:'A3', effect:'S5', invert:false },
+    { label:'Nuit calme → humeur positive J+1',         trigger:'S5', effect:'H1', invert:false },
+    { label:'Couché avant 22h → levé avant 9h J+1',    trigger:'S1', effect:'S3', invert:false },
+    { label:'Initiative Sasha → humeur positive ce jour', trigger:'A7', effect:'H1', invert:false },
+  ]},
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉTAT GLOBAL
+// ─────────────────────────────────────────────────────────────────────────────
+let formState = {};
+KPIs.forEach(k => formState[k.id.toLowerCase()] = null);
+let contactVisible = true;
+let cache = [];
+let pendingImport = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUPABASE
+// ─────────────────────────────────────────────────────────────────────────────
+async function sbFetch(path, opts = {}) {
+  const r = await fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: { ...HDR, ...(opts.headers || {}) },
+    method: opts.method || 'GET',
+    body: opts.body,
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.status === 204 ? null : r.json();
+}
+
+function setSyncStatus(s, l) {
+  document.getElementById('syncDot').className = 'sync-dot ' + s;
+  document.getElementById('syncLabel').textContent = l;
+}
+
+async function loadEntries() {
+  setSyncStatus('loading', 'Chargement…');
+  try {
+    cache = await sbFetch('journal?select=*&order=date.desc') || [];
+    setSyncStatus('ok', 'Synchronisé');
+  } catch(e) { setSyncStatus('error', 'Hors ligne'); }
+  return cache;
+}
+
+async function upsertEntry(entry) {
+  setSyncStatus('loading', 'Enregistrement…');
+  try {
+    const row = { date: entry.date, contact: entry.contact !== false };
+    KPIs.forEach(k => row[k.id.toLowerCase()] = entry[k.id.toLowerCase()] || '');
+    await sbFetch('journal', {
+      method: 'POST',
+      headers: { ...HDR, 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(row),
+    });
+    setSyncStatus('ok', 'Synchronisé');
+    return true;
+  } catch(e) { setSyncStatus('error', 'Erreur'); showToast('Erreur : ' + e.message); return false; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CALCULS STATISTIQUES (avec polarité et exclusion du ?)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Valeur d'une réponse selon la polarité (null = exclu du dénominateur)
+function valItem(kpi, rep) {
+  if (!rep || rep === '?' || rep === '') return null;
+  if (kpi.polarite === 'info') return null;
+  if (kpi.polarite === 'pos') return rep === 'O' ? 1 : 0;
+  if (kpi.polarite === 'neg') return rep === 'N' ? 1 : 0; // inversé
+  return null;
+}
+
+// % score d'un item sur entries (hors ?)
+function pctItem(id, entries) {
+  const kpi = KPIs.find(k => k.id === id);
+  if (!kpi || kpi.polarite === 'info') return null;
+  let sum = 0, n = 0;
+  entries.forEach(e => {
+    const v = valItem(kpi, e[id.toLowerCase()]);
+    if (v !== null) { sum += v; n++; }
+  });
+  return n > 0 ? Math.round(sum / n * 100) : null;
+}
+
+// Taux de ? d'un item
+function tauxQ(id, entries) {
+  let nbQ = 0;
+  entries.forEach(e => { if ((e[id.toLowerCase()] || '') === '?') nbQ++; });
+  return entries.length > 0 ? Math.round(nbQ / entries.length * 100) : 0;
+}
+
+// Score d'un domaine (hors items info, hors hebdo)
+function scoreDom(cat, entries) {
+  const items = KPIs.filter(k => k.cat === cat && k.scoreDomaine && !k.hebdo && k.polarite !== 'info');
+  let sum = 0, n = 0, nQ = 0, tot = 0;
+  entries.forEach(e => {
+    items.forEach(k => {
+      tot++;
+      const rep = e[k.id.toLowerCase()] || '';
+      if (rep === '?' || rep === '') { nQ++; return; }
+      const v = valItem(k, rep);
+      if (v !== null) { sum += v; n++; }
+    });
+  });
+  return { score: n > 0 ? Math.round(sum / n * 100) : null, n, tauxQ: tot > 0 ? Math.round(nQ / tot * 100) : 0 };
+}
+
+// Score global d'une journée (tous items scorables, hors hebdo)
+function scoreJour(e) {
+  const items = KPIs.filter(k => k.scoreDomaine && !k.hebdo && k.polarite !== 'info');
+  let sum = 0, n = 0;
+  items.forEach(k => {
+    const v = valItem(k, e[k.id.toLowerCase()] || '');
+    if (v !== null) { sum += v; n++; }
+  });
+  return n > 0 ? Math.round(sum / n * 100) : null;
+}
+
+function scoreColor(p) { return p >= 70 ? '#16a34a' : p >= 40 ? '#d97706' : '#dc2626'; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FORMULAIRE DE SAISIE
+// ─────────────────────────────────────────────────────────────────────────────
+function initDate() {
+  document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+}
+
+function toggleContact(visible) {
+  contactVisible = visible;
+  document.getElementById('contactLabel').textContent = visible ? 'Sasha visible ce matin' : 'Sasha non visible ce matin — tous les items observationnels passent en ?';
+  if (!visible) {
+    KPIs.forEach(k => {
+      if (k.id !== 'M3' && k.id !== 'M4') formState[k.id.toLowerCase()] = '?';
+    });
+  } else {
+    KPIs.forEach(k => { formState[k.id.toLowerCase()] = null; });
+  }
+  renderForm();
+}
+
+function renderForm() {
+  const items = KPIs.filter(k => k.polarite !== 'info' && !k.therapeuteOnly);
+  const remplis = items.filter(k => formState[k.id.toLowerCase()] !== null).length;
+  const pct = Math.round(remplis / items.length * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = remplis + ' / ' + items.length + ' indicateurs remplis';
+
+  // Afficher aussi M4 (thérapeutes) dans la saisie mais avec badge
+  const allItems = KPIs;
+
+  Object.keys(CAT_MAP).forEach(cat => {
+    const el = document.getElementById(CAT_MAP[cat]);
+    el.innerHTML = '';
+    allItems.filter(k => k.cat === cat).forEach(k => {
+      const v = formState[k.id.toLowerCase()];
+      const dimmed = !contactVisible && k.id !== 'M3' && k.id !== 'M4';
+      const row = document.createElement('div');
+      row.className = 'kpi-row' + (dimmed ? ' dimmed' : '');
+      const badges = [
+        k.version === '2.0' ? '<span class="kpi-new">nouveau</span>' : '',
+        k.polarite === 'info' ? '<span class="kpi-info">contextuel</span>' : '',
+        k.therapeuteOnly ? '<span class="kpi-thera">thérapeutes</span>' : '',
+      ].join('');
+      row.innerHTML = `
+        <div>
+          <div class="kpi-label">${k.label}${badges}</div>
+          <div class="kpi-hint">${k.hint}</div>
+        </div>
+        <div class="btn-group">
+          <button class="btn-onz${v==='O'?' sel-O':''}" onclick="setVal('${k.id}','O')">O</button>
+          <button class="btn-onz${v==='N'?' sel-N':''}" onclick="setVal('${k.id}','N')">N</button>
+          <button class="btn-onz${v==='?'?' sel-Q':''}" onclick="setVal('${k.id}','?')">?</button>
+        </div>`;
+      el.appendChild(row);
+    });
+  });
+}
+
+function setVal(id, val) {
+  const cur = formState[id.toLowerCase()];
+  formState[id.toLowerCase()] = cur === val ? null : val;
+  renderForm();
+}
+
+function resetForm() {
+  KPIs.forEach(k => formState[k.id.toLowerCase()] = null);
+  contactVisible = true;
+  document.getElementById('contactToggle').checked = true;
+  document.getElementById('contactLabel').textContent = 'Sasha visible ce matin';
+  renderForm();
+}
+
+async function saveDay() {
+  const date = document.getElementById('dateInput').value;
+  if (!date) { showToast('Sélectionnez une date'); return; }
+  const items = KPIs.filter(k => k.polarite !== 'info');
+  if (items.filter(k => formState[k.id.toLowerCase()] !== null).length === 0) {
+    showToast('Remplissez au moins un indicateur'); return;
+  }
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  const entry = { date, contact: contactVisible };
+  KPIs.forEach(k => entry[k.id.toLowerCase()] = formState[k.id.toLowerCase()] || '');
+  const ok = await upsertEntry(entry);
+  if (ok) {
+    const idx = cache.findIndex(e => e.date === date);
+    if (idx >= 0) cache[idx] = { ...cache[idx], ...entry }; else cache.unshift(entry);
+    cache.sort((a, b) => b.date.localeCompare(a.date));
+    showToast('Journée enregistrée ✓');
+    resetForm();
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    document.getElementById('dateInput').value = d.toISOString().split('T')[0];
+  }
+  btn.disabled = false; btn.textContent = 'Enregistrer cette journée';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'journal')   renderJournal();
+  if (name === 'stats')     renderStats();
+  if (name === 'dashboard') renderDashboard();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JOURNAL
+// ─────────────────────────────────────────────────────────────────────────────
+async function renderJournal() {
+  const el = document.getElementById('journal-content');
+  el.innerHTML = '<div class="empty-state">Chargement…</div>';
+  const entries = await loadEntries();
+  if (!entries.length) { el.innerHTML = '<div class="empty-state">Aucune journée enregistrée.</div>'; return; }
+  const cols = KPIs.map(k => k.id);
+  let html = '<div class="journal-wrap"><table class="journal-table"><thead><tr><th>Date</th><th>Contact</th>';
+  html += cols.map(c => `<th>${c}</th>`).join('') + '<th></th></tr></thead><tbody>';
+  entries.forEach(e => {
+    const d = new Date(e.date + 'T12:00:00');
+    const label = d.toLocaleDateString('fr-CH', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    const contactIcon = e.contact === false ? '—' : '✓';
+    html += `<tr><td style="font-size:11px;white-space:nowrap;color:#6b6860;font-family:system-ui">${label}</td>`;
+    html += `<td style="font-size:10px;color:var(--muted)">${contactIcon}</td>`;
+    cols.forEach(c => {
+      const v = (e[c.toLowerCase()] || e[c] || '');
+      html += `<td class="${v==='?'?'cell-Q':(v?'cell-'+v:'')}">${v||'—'}</td>`;
+    });
+    html += `<td><button class="del-btn" onclick="deleteEntry('${e.date}')">✕</button></td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+async function deleteEntry(date) {
+  if (!confirm('Supprimer la journée du ' + date + ' ?')) return;
+  try {
+    await sbFetch('journal?date=eq.' + encodeURIComponent(date), { method:'DELETE', headers:{...HDR,'Prefer':'return=minimal'} });
+    cache = cache.filter(e => e.date !== date);
+    renderJournal(); showToast('Supprimé');
+  } catch(e) { showToast('Erreur suppression'); }
+}
+
+async function clearAll() {
+  if (!confirm('Effacer TOUTES les données ? Irréversible.')) return;
+  try {
+    await sbFetch('journal?id=gt.0', { method:'DELETE', headers:{...HDR,'Prefer':'return=minimal'} });
+    cache = []; renderJournal(); showToast('Données effacées');
+  } catch(e) { showToast('Erreur : ' + e.message); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPORT CSV
+// ─────────────────────────────────────────────────────────────────────────────
+function handleImport(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      if (lines.length < 2) { showToast('CSV vide'); return; }
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const headers = lines[0].split(sep).map(h => h.trim().replace(/^\uFEFF/, '').toLowerCase());
+      const dateIdx = headers.findIndex(h => h === 'date');
+      if (dateIdx === -1) { showToast('Colonne Date introuvable'); return; }
+
+      // Détecter et sauter la ligne libellés (ligne 2 si elle ne contient pas de date ISO)
+      let startLine = 1;
+      if (lines.length > 1) {
+        const secondVals = lines[1].split(sep);
+        const potentialDate = secondVals[dateIdx] ? secondVals[dateIdx].trim() : '';
+        if (!potentialDate.match(/^\d{4}-\d{2}-\d{2}$/) && !potentialDate.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+          startLine = 2; // ligne 2 = libellés, on saute
+        }
+      }
+
+      const parsed = []; const errors = [];
+      for (let i = startLine; i < lines.length; i++) {
+        const vals = lines[i].split(sep).map(v => v.trim());
+        let dateRaw = vals[dateIdx] || '';
+        // Normaliser date JJ/MM/AAAA → AAAA-MM-JJ
+        if (dateRaw.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+          const [d, m, y] = dateRaw.split('/');
+          dateRaw = `${y}-${m}-${d}`;
+        }
+        if (!dateRaw.match(/^\d{4}-\d{2}-\d{2}$/)) { errors.push(`Ligne ${i+1} : date invalide "${dateRaw}"`); continue; }
+        const entry = { date: dateRaw };
+        KPIs.forEach(k => {
+          const idx = headers.findIndex(h => h === k.id.toLowerCase());
+          entry[k.id.toLowerCase()] = (idx >= 0 && vals[idx] !== undefined) ? vals[idx].toUpperCase() : '';
+          if (!['O','N','?',''].includes(entry[k.id.toLowerCase()])) entry[k.id.toLowerCase()] = '';
+        });
+        parsed.push(entry);
+      }
+
+      pendingImport = { parsed, errors };
+      renderImportPreview(parsed, errors);
+    } catch(err) { showToast('Erreur CSV : ' + err.message); }
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function renderImportPreview(parsed, errors) {
+  const el = document.getElementById('import-preview');
+  const existDates = new Set(cache.map(e => e.date));
+  const newOnes = parsed.filter(e => !existDates.has(e.date)).length;
+  const updates = parsed.filter(e => existDates.has(e.date)).length;
+
+  let html = `<div class="import-preview">
+    <h3>Aperçu de l'import — ${parsed.length} journée(s) lue(s)</h3>
+    <div class="import-stats">
+      <span class="import-stat" style="background:var(--greenbg);color:var(--green)">${newOnes} nouvelle(s)</span>
+      <span class="import-stat" style="background:var(--amberbg);color:var(--amber)">${updates} mise(s) à jour</span>
+      ${errors.length ? `<span class="import-stat" style="background:var(--redbg);color:var(--red)">${errors.length} erreur(s)</span>` : ''}
+    </div>`;
+  if (errors.length) {
+    html += `<div class="import-errors">${errors.map(e => `• ${e}`).join('<br>')}</div>`;
+  }
+  html += `<div class="import-actions">
+    <button class="btn-save" onclick="confirmImport()">Confirmer l'import</button>
+    <button class="btn-secondary" onclick="cancelImport()">Annuler</button>
+  </div></div>`;
+  el.innerHTML = html;
+}
+
+async function confirmImport() {
+  if (!pendingImport) return;
+  const { parsed } = pendingImport;
+  let n = 0, errors = 0;
+  for (const entry of parsed) {
+    const ok = await upsertEntry(entry);
+    if (ok) { n++; const idx = cache.findIndex(e => e.date === entry.date); if (idx >= 0) cache[idx] = {...cache[idx],...entry}; else cache.unshift(entry); }
+    else errors++;
+  }
+  cache.sort((a, b) => b.date.localeCompare(a.date));
+  pendingImport = null;
+  document.getElementById('import-preview').innerHTML = '';
+  renderJournal();
+  showToast(n + ' journées importées' + (errors ? ` · ${errors} erreur(s)` : '') + ' ✓');
+}
+
+function cancelImport() {
+  pendingImport = null;
+  document.getElementById('import-preview').innerHTML = '';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORT CSV & EXCEL
+// Format : ligne 1 = codes, ligne 2 = libellés, ligne 3+ = données
+// ─────────────────────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!cache.length) { showToast('Aucune donnée'); return; }
+  const cols = KPIs.map(k => k.id);
+  const line1 = ['Date', 'Contact', ...cols].join(';');
+  const line2 = ['Libellé', 'Sasha visible', ...KPIs.map(k => k.label.replace(/;/g,'|'))].join(';');
+  const rows = cache.map(e => [
+    e.date,
+    e.contact === false ? 'N' : 'O',
+    ...cols.map(c => e[c.toLowerCase()] || e[c] || ''),
+  ].join(';'));
+  dl('\uFEFF' + [line1, line2, ...rows].join('\n'), 'Suivi_Sasha_' + today() + '.csv', 'text/csv;charset=utf-8');
+  showToast('CSV exporté ✓');
+}
+
+function exportExcel() {
+  if (!cache.length) { showToast('Aucune donnée'); return; }
+  const cols = KPIs.map(k => k.id);
+  let xml = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Journal"><Table>';
+  xml += '<Row>' + ['Date','Contact',...cols].map(v => `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`).join('') + '</Row>';
+  xml += '<Row>' + ['Libellé','Sasha visible',...KPIs.map(k=>k.label)].map(v => `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`).join('') + '</Row>';
+  cache.forEach(e => {
+    xml += '<Row>' + [e.date, e.contact===false?'N':'O', ...cols.map(c=>e[c.toLowerCase()]||e[c]||'')].map(v => `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`).join('') + '</Row>';
+  });
+  xml += '</Table></Worksheet></Workbook>';
+  dl(xml, 'Suivi_Sasha_' + today() + '.xls', 'application/vnd.ms-excel');
+  showToast('Excel exporté ✓');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATISTIQUES
+// ─────────────────────────────────────────────────────────────────────────────
+async function renderStats() {
+  const el = document.getElementById('stats-content');
+  el.innerHTML = '<div class="card"><div class="empty-state">Chargement…</div></div>';
+  const entries = await loadEntries();
+  if (entries.length < 3) {
+    el.innerHTML = '<div class="card"><div class="empty-state">Enregistrez au moins 3 journées pour voir les statistiques.</div></div>';
+    return;
+  }
+  const n = entries.length;
+
+  // Taux de complétion
+  const premiere = new Date(entries[entries.length-1].date + 'T12:00:00');
+  const aujourd = new Date(); aujourd.setHours(12,0,0,0);
+  const joursEcoules = Math.round((aujourd - premiere) / 86400000) + 1;
+  const tauxCompletion = Math.round(n / joursEcoules * 100);
+
+  // Scores domaines
+  const doms = Object.keys(DOMAINES).map(d => ({ ...DOMAINES[d], key: d, ...scoreDom(d, entries) }));
+
+  // Résumé global
+  let html = '<div class="stats-grid">';
+  html += `<div class="stat-card"><div class="stat-label">Journées enregistrées</div><div class="stat-val">${n}</div><div class="stat-sub">sur ${joursEcoules} jours écoulés</div></div>`;
+  html += `<div class="stat-card"><div class="stat-label">Taux de complétion</div><div class="stat-val" style="color:${scoreColor(tauxCompletion)}">${tauxCompletion}%</div><div class="stat-sub">depuis le ${entries[entries.length-1].date}</div></div>`;
+  doms.forEach(d => {
+    const s = d.score;
+    const c = s !== null ? scoreColor(s) : '#9ca3af';
+    html += `<div class="stat-card"><div class="stat-label">${d.label}</div><div class="stat-val" style="color:${c}">${s !== null ? s+'%' : '—'}</div><div class="stat-sub">? : ${d.tauxQ}%</div></div>`;
+  });
+  html += '</div>';
+
+  // Détail par item
+  html += `<div class="card"><div style="font-size:12px;color:var(--muted);font-family:system-ui;margin-bottom:4px">Détail par indicateur · % favorable sur ${n} jours (hors ?)</div>`;
+  html += `<div style="font-size:11px;color:var(--hint);font-family:system-ui;margin-bottom:12px">Vert ≥ 70% · Orange ≥ 40% · Rouge < 40% · % ? = taux d'incertitude</div>`;
+
+  let curCat = '';
+  KPIs.forEach(k => {
+    if (k.cat !== curCat) {
+      if (curCat) html += '';
+      html += `<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:system-ui;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px">${DOMAINES[k.cat]?.label || k.cat}</div>`;
+      curCat = k.cat;
+    }
+    const p = pctItem(k.id, entries);
+    const q = tauxQ(k.id, entries);
+    const color = p !== null ? scoreColor(p) : '#9ca3af';
+    const infoNote = k.polarite === 'info' ? '<span style="font-size:9px;color:var(--hint);margin-left:4px;font-family:system-ui">(contextuel)</span>' : '';
+    const newNote = k.version === '2.0' ? '<span style="font-size:9px;color:#1e40af;margin-left:4px;font-family:system-ui">nouveau</span>' : '';
+    html += `<div class="bar-row">
+      <span style="color:var(--hint);font-size:10px;font-family:system-ui">${k.id}</span>
+      <span style="color:var(--text)">${k.label}${infoNote}${newNote}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${p||0}%;background:${color}"></div></div>
+      <span style="text-align:right;font-weight:bold;color:${color}">${p !== null ? p+'%' : '—'}</span>
+      <span style="text-align:right;color:var(--hint)">${q}% ?</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Corrélations
+  CORR_GROUPS.forEach(grp => {
+    html += `<div class="corr-group"><div class="corr-group-title" style="color:${grp.color};background:${grp.bg}">${grp.title} <span class="badge-prov">${grp.statut}</span></div>`;
+    grp.items.forEach(cor => {
+      // Exclure items hebdo des corrélations J/J
+      const trigKpi = KPIs.find(k => k.id === cor.trigger);
+      const effKpi = KPIs.find(k => k.id === cor.effect);
+      if (trigKpi?.hebdo || effKpi?.hebdo) return;
+
+      const trig = entries.filter((e, i) => (e[cor.trigger.toLowerCase()] || '') === 'O' && i + 1 < entries.length);
+      if (trig.length < 7) {
+        const fiabilite = trig.length < 3 ? 'données insuffisantes' : `${trig.length} cas — fiabilité faible`;
+        html += `<div class="corr-row"><span class="corr-label">${cor.label}</span><span class="badge-na">${fiabilite}</span></div>`;
+        return;
+      }
+      const avec = trig.filter(e => {
+        const idx = entries.indexOf(e); const next = entries[idx + 1]; if (!next) return false;
+        return cor.invert ? (next[cor.effect.toLowerCase()] || '') === 'N' : (next[cor.effect.toLowerCase()] || '') === 'O';
+      }).length;
+      const p = Math.round(avec / trig.length * 100);
+      const isP = grp.title.includes('protection');
+      const c = isP ? (p >= 60 ? '#16a34a' : p >= 30 ? '#d97706' : '#dc2626') : (p >= 50 ? '#dc2626' : p >= 30 ? '#d97706' : '#16a34a');
+      const fiab = trig.length < 14 ? ' <span style="font-size:9px;color:var(--hint)">(fiabilité partielle)</span>' : '';
+      html += `<div class="corr-row"><span class="corr-label">${cor.label}${fiab}</span><span class="corr-pct" style="color:${c}">${p}% <span style="font-weight:normal;font-size:10px;color:var(--hint)">(${trig.length} cas)</span></span></div>`;
+    });
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────────────────────────────────────
+function gauge(pct, color, size=76) {
+  if (pct === null) return `<svg class="gauge-svg" width="${size}" height="${size}" viewBox="0 0 80 80"><circle cx="40" cy="40" r="30" fill="none" stroke="#e2e0d8" stroke-width="7"/></svg>`;
+  const r = 30, circ = 2 * Math.PI * r;
+  const dash = circ * pct / 100;
+  return `<svg class="gauge-svg" width="${size}" height="${size}" viewBox="0 0 80 80">
+    <circle cx="40" cy="40" r="${r}" fill="none" stroke="#e2e0d8" stroke-width="7"/>
+    <circle cx="40" cy="40" r="${r}" fill="none" stroke="${color}" stroke-width="7"
+      stroke-dasharray="${dash.toFixed(1)} ${(circ-dash).toFixed(1)}" stroke-linecap="round" transform="rotate(-90 40 40)"/>
+  </svg>`;
+}
+
+async function renderDashboard() {
+  const el = document.getElementById('dashboard-content');
+  el.innerHTML = '<div class="card"><div class="empty-state">Chargement…</div></div>';
+  const entries = await loadEntries();
+  if (entries.length < 3) {
+    el.innerHTML = '<div class="card"><div class="empty-state">Enregistrez au moins 3 journées pour voir le dashboard.</div></div>';
+    return;
+  }
+  const n = entries.length;
+  let html = '';
+
+  // ── KPI du jour ──
+  const dernier = entries[0];
+  const avant = entries[1];
+  const scoreJ = scoreJour(dernier);
+  const scoreJ1 = avant ? scoreJour(avant) : null;
+  const delta = scoreJ !== null && scoreJ1 !== null ? scoreJ - scoreJ1 : null;
+  const deltaStr = delta !== null ? (delta >= 0 ? `+${delta}pts` : `${delta}pts`) : '';
+  const deltaColor = delta !== null ? (delta >= 0 ? '#16a34a' : '#dc2626') : '';
+
+  const dDate = new Date(dernier.date + 'T12:00:00').toLocaleDateString('fr-CH', { weekday:'long', day:'2-digit', month:'long' });
+
+  html += `<div style="font-size:11px;color:var(--muted);font-family:system-ui;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase">Dernière journée saisie — ${dDate}</div>`;
+  html += '<div class="kpi-day-grid">';
+  html += `<div class="kpi-day-card">
+    <div class="kpi-day-label">Score global</div>
+    <div class="kpi-day-val" style="color:${scoreJ!==null?scoreColor(scoreJ):'var(--hint)'}">${scoreJ!==null?scoreJ+'%':'—'}</div>
+    <div class="kpi-day-trend" style="color:${deltaColor}">${deltaStr}</div>
+  </div>`;
+  Object.keys(DOMAINES).forEach(d => {
+    const { score } = scoreDom(d, [dernier]);
+    const c = score !== null ? scoreColor(score) : 'var(--hint)';
+    html += `<div class="kpi-day-card">
+      <div class="kpi-day-label">${DOMAINES[d].label}</div>
+      <div class="kpi-day-val" style="color:${c}">${score !== null ? score+'%' : '—'}</div>
+    </div>`;
+  });
+  // Taux de complétion
+  const premiere = new Date(entries[entries.length-1].date + 'T12:00:00');
+  const auj = new Date(); auj.setHours(12,0,0,0);
+  const joursEcoules = Math.round((auj - premiere) / 86400000) + 1;
+  const tauxComp = Math.round(n / joursEcoules * 100);
+  html += `<div class="kpi-day-card">
+    <div class="kpi-day-label">Complétion</div>
+    <div class="kpi-day-val" style="color:${scoreColor(tauxComp)}">${tauxComp}%</div>
+    <div class="kpi-day-trend">${n} / ${joursEcoules} jours</div>
+  </div>`;
+  html += '</div>';
+
+  // ── Jauges scores domaines (toutes données) ──
+  html += `<div style="font-size:11px;color:var(--muted);font-family:system-ui;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase">Scores sur ${n} journées</div>`;
+  html += '<div class="dash-grid">';
+  Object.keys(DOMAINES).forEach(d => {
+    const { score, tauxQ: tq } = scoreDom(d, entries);
+    const c = score !== null ? scoreColor(score) : '#9ca3af';
+    html += `<div class="gauge-card">
+      <div class="gauge-label">${DOMAINES[d].label}</div>
+      ${gauge(score, c)}
+      <div class="gauge-val" style="color:${c}">${score !== null ? score+'%' : '—'}</div>
+      <div class="gauge-sub">? : ${tq}%</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // ── Courbe 4 semaines calendaires ──
+  html += '<div class="trend-card"><div class="trend-title">Évolution hebdomadaire — 4 dernières semaines</div>';
+  // Regroupement par semaine calendaire (lundi→dimanche), min 3 jours
+  const semaines = [];
+  const getMonday = d => { const dd = new Date(d+'T12:00:00'); const day = dd.getDay(); const diff = (day===0?-6:1-day); dd.setDate(dd.getDate()+diff); return dd.toISOString().split('T')[0]; };
+  const bySemaine = {};
+  entries.forEach(e => { const m = getMonday(e.date); if (!bySemaine[m]) bySemaine[m] = []; bySemaine[m].push(e); });
+  const semKeys = Object.keys(bySemaine).sort().slice(-4);
+  semKeys.forEach(m => { if (bySemaine[m].length >= 3) semaines.push({ lundi: m, entries: bySemaine[m] }); });
+
+  if (semaines.length >= 2) {
+    const W=560, H=180, padL=40, padB=28, padT=16, padR=100;
+    const gW=W-padL-padR, gH=H-padT-padB;
+    const xStep = semaines.length > 1 ? gW/(semaines.length-1) : gW;
+    const xPos = i => padL + i * xStep;
+    const yPos = v => padT + gH - (v/100*gH);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;overflow:visible">`;
+    [0,25,50,75,100].forEach(v => {
+      const y = yPos(v);
+      svg += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#e2e0d8" stroke-width="1"/>`;
+      svg += `<text x="${padL-5}" y="${y+4}" font-size="9" fill="#9c9a92" text-anchor="end" font-family="system-ui">${v}%</text>`;
+    });
+    semaines.forEach((s, i) => {
+      const d = new Date(s.lundi+'T12:00:00');
+      const lbl = d.toLocaleDateString('fr-CH', {day:'2-digit',month:'2-digit'});
+      svg += `<text x="${xPos(i)}" y="${H-5}" font-size="10" fill="#6b6860" text-anchor="middle" font-family="system-ui">${lbl}</text>`;
+    });
+    const metrics = [
+      { key:'sommeil', label:'Sommeil', color:'#534AB7' },
+      { key:'humeur',  label:'Humeur',  color:'#0F6E56' },
+      { key:'conso',   label:'Conso',   color:'#993C1D' },
+      { key:'soins',   label:'Soins',   color:'#185FA5' },
+    ];
+    metrics.forEach(m => {
+      const vals = semaines.map(s => scoreDom(m.key, s.entries).score || 0);
+      let path = 'M';
+      vals.forEach((v, i) => { path += (i>0?' L ':'')+xPos(i).toFixed(1)+' '+yPos(v).toFixed(1); });
+      svg += `<path d="${path}" fill="none" stroke="${m.color}" stroke-width="2" stroke-linecap="round"/>`;
+      vals.forEach((v, i) => {
+        svg += `<circle cx="${xPos(i).toFixed(1)}" cy="${yPos(v).toFixed(1)}" r="3.5" fill="${m.color}" stroke="#fff" stroke-width="1.5"/>`;
+        svg += `<text x="${xPos(i).toFixed(1)}" y="${(yPos(v)-8).toFixed(1)}" font-size="9" fill="${m.color}" text-anchor="middle" font-family="system-ui">${v}%</text>`;
+      });
+      const lv = vals[vals.length-1];
+      svg += `<text x="${(W-padR+8)}" y="${(yPos(lv)+4).toFixed(1)}" font-size="10" fill="${m.color}" font-family="system-ui">${m.label}</text>`;
+    });
+    svg += '</svg>';
+    html += `<div style="overflow-x:auto">${svg}</div>`;
+  } else {
+    html += '<div class="no-alert">Pas encore assez de semaines complètes (min. 2 semaines avec ≥ 3 jours).</div>';
+  }
+  html += '</div>';
+
+  // ── Résumé hebdomadaire (semaine calendaire courante) ──
+  html += '<div class="trend-card"><div class="trend-title">Résumé hebdomadaire — semaine en cours</div>';
+  const monLundi = getMonday(new Date().toISOString().split('T')[0]);
+  const semCourante = entries.filter(e => e.date >= monLundi);
+  if (semCourante.length >= 1) {
+    html += '<table class="weekly-table"><thead><tr><th>Domaine</th><th>Score moy.</th><th>Min</th><th>Max</th><th>Taux ?</th></tr></thead><tbody>';
+    Object.keys(DOMAINES).forEach(d => {
+      const items = KPIs.filter(k => k.cat === d && k.scoreDomaine && !k.hebdo && k.polarite !== 'info');
+      const scores = semCourante.map(e => {
+        let sum=0,nn=0;
+        items.forEach(k => { const v=valItem(k,e[k.id.toLowerCase()]||''); if(v!==null){sum+=v;nn++;} });
+        return nn>0?Math.round(sum/nn*100):null;
+      }).filter(s=>s!==null);
+      const moy = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+      const min = scores.length ? Math.min(...scores) : null;
+      const max = scores.length ? Math.max(...scores) : null;
+      const tq = (() => { const { tauxQ: tqv } = scoreDom(d, semCourante); return tqv; })();
+      const c = moy !== null ? scoreColor(moy) : 'var(--hint)';
+      html += `<tr>
+        <td>${DOMAINES[d].label}</td>
+        <td style="color:${c};font-weight:bold">${moy!==null?moy+'%':'—'}</td>
+        <td style="color:${min!==null?scoreColor(min):'var(--hint)'}">${min!==null?min+'%':'—'}</td>
+        <td style="color:${max!==null?scoreColor(max):'var(--hint)'}">${max!==null?max+'%':'—'}</td>
+        <td style="color:var(--muted)">${tq}%</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  } else { html += '<div class="no-alert">Aucune saisie cette semaine.</div>'; }
+  html += '</div>';
+
+  // ── Carte thermique ──
+  html += '<div class="trend-card"><div class="trend-title">Carte thermique — score global par jour</div>';
+  html += '<div style="font-size:11px;color:var(--hint);font-family:system-ui;margin-bottom:10px">Vert ≥ 70% · Orange ≥ 40% · Rouge < 40% · Survolez pour le détail</div>';
+  html += '<div class="heatmap-wrap">';
+  [...entries].reverse().forEach(e => {
+    const ds = scoreJour(e);
+    const bg = ds !== null ? scoreColor(ds) : '#ccc9be';
+    const d = new Date(e.date+'T12:00:00');
+    const lbl = d.toLocaleDateString('fr-CH',{day:'2-digit',month:'2-digit'});
+    html += `<div class="hm-cell" style="background:${bg}" title="${lbl}">
+      <span>${ds !== null ? ds : '?'}</span>
+      <span class="hm-tip">${lbl} · ${ds !== null ? ds+'%' : 'non calculé'}</span>
+    </div>`;
+  });
+  html += '</div></div>';
+
+  // ── Top corrélations ──
+  html += '<div class="corr-top"><div class="corr-top-title">Corrélations les plus significatives</div>';
+  const allCorrs = [];
+  CORR_GROUPS.forEach(grp => {
+    grp.items.forEach(cor => {
+      const trigKpi = KPIs.find(k => k.id === cor.trigger);
+      const effKpi = KPIs.find(k => k.id === cor.effect);
+      if (trigKpi?.hebdo || effKpi?.hebdo) return;
+      const trig = entries.filter((e,i) => (e[cor.trigger.toLowerCase()]||'')==='O' && i+1<entries.length);
+      if (trig.length < 7) return;
+      const avec = trig.filter(e => { const idx=entries.indexOf(e); const next=entries[idx+1]; if(!next)return false; return cor.invert?(next[cor.effect.toLowerCase()]||'')==='N':(next[cor.effect.toLowerCase()]||'')==='O'; }).length;
+      const p = Math.round(avec/trig.length*100);
+      allCorrs.push({ label:cor.label, p, n:trig.length, grp:grp.title });
+    });
+  });
+  allCorrs.sort((a,b) => b.p - a.p);
+  const top = allCorrs.slice(0,5);
+  if (!top.length) { html += '<div class="no-alert">Pas encore assez de données pour les corrélations (min. 7 cas par corrélation).</div>'; }
+  else {
+    top.forEach(c => {
+      const isP = c.grp.includes('protection');
+      const color = isP ? (c.p>=60?'#16a34a':c.p>=30?'#d97706':'#dc2626') : (c.p>=50?'#dc2626':c.p>=30?'#d97706':'#16a34a');
+      html += `<div class="corr-bar-row">
+        <span class="corr-bar-label">${c.label}</span>
+        <div class="corr-bar-track"><div class="corr-bar-fill" style="width:${c.p}%;background:${color}"></div></div>
+        <span class="corr-bar-pct" style="color:${color};font-weight:bold">${c.p}%</span>
+        <span style="font-size:10px;color:var(--hint);margin-left:4px;font-family:system-ui">(${c.n})</span>
+      </div>`;
+    });
+  }
+  html += '</div>';
+
+  // ── Alertes 7 derniers jours ──
+  html += '<div class="alert-card"><div class="alert-title">Signaux des 7 derniers jours</div>';
+  const last7 = entries.slice(0,7);
+  const alerts = [];
+  const countV = (id, val) => last7.filter(e => (e[id.toLowerCase()]||'') === val).length;
+
+  // Médicaments
+  const medNon = countV('m3','N');
+  if (medNon >= 4) alerts.push({type:'red',  icon:'💊', msg:`Médicaments non pris ${medNon} jours sur 7`});
+  else if (medNon >= 2) alerts.push({type:'orange', icon:'💊', msg:`Médicaments non pris ${medNon} jours sur 7`});
+
+  // RDV non honoré
+  const rdvNon = last7.filter(e => e['m1']==='O' && e['m2']==='N').length;
+  if (rdvNon >= 1) alerts.push({type:'red', icon:'🏥', msg:`${rdvNon} rendez-vous médical(aux) non honoré(s)`});
+
+  // Consommation perçue
+  const consoPer = countV('c1','N');
+  if (consoPer >= 4) alerts.push({type:'red', icon:'⚠️', msg:`Consommation perçue ${consoPer} jours sur 7`});
+  else if (consoPer >= 2) alerts.push({type:'orange', icon:'⚠️', msg:`Consommation perçue ${consoPer} jours sur 7`});
+
+  // Lever tardif
+  const leverTard = countV('s3','N');
+  if (leverTard >= 5) alerts.push({type:'red', icon:'🛏', msg:`Levé après 9h ${leverTard} jours sur 7`});
+  else if (leverTard >= 3) alerts.push({type:'orange', icon:'🛏', msg:`Levé après 9h ${leverTard} jours sur 7`});
+
+  // Humeur
+  const bonneH = countV('h1','O');
+  if (bonneH >= 5) alerts.push({type:'green', icon:'😊', msg:`Bonne humeur ${bonneH} jours sur 7 — tendance positive`});
+  else if (bonneH <= 1) alerts.push({type:'red', icon:'😔', msg:`Bonne humeur seulement ${bonneH} jour(s) sur 7`});
+
+  // Énergie (nouveau H6)
+  const energieFaible = countV('h6','N');
+  if (energieFaible >= 4) alerts.push({type:'red', icon:'🔋', msg:`Énergie faible ${energieFaible} jours sur 7`});
+  else if (energieFaible >= 2) alerts.push({type:'orange', icon:'🔋', msg:`Énergie faible ${energieFaible} jours sur 7`});
+
+  // Nuits hors domicile
+  const nuitsHors = last7.filter(e => e['a2']==='O' || e['a6']==='O').length;
+  if (nuitsHors >= 4) alerts.push({type:'red', icon:'🏠', msg:`${nuitsHors} nuits hors domicile sur 7`});
+  else if (nuitsHors >= 2) alerts.push({type:'orange', icon:'🏠', msg:`${nuitsHors} nuits hors domicile sur 7`});
+  else if (nuitsHors === 0) alerts.push({type:'green', icon:'🏠', msg:'Toutes les nuits à la maison cette semaine'});
+
+  // Taux ? élevé
+  const joursHautQ = last7.filter(e => {
+    const items = KPIs.filter(k => k.scoreDomaine); const nbQ = items.filter(k=>(e[k.id.toLowerCase()]||'')==='?').length;
+    return nbQ/items.length > 0.4;
+  }).length;
+  if (joursHautQ >= 3) alerts.push({type:'orange', icon:'❓', msg:`Taux d'incertitude > 40% sur ${joursHautQ} jours — Sasha peu visible ?`});
+
+  // Initiative (A7)
+  const initiative = countV('a7','O');
+  if (initiative >= 4) alerts.push({type:'green', icon:'✨', msg:`${initiative} jours avec une initiative de Sasha — très bon signe`});
+
+  if (!alerts.length) { html += '<div class="no-alert">Aucun signal préoccupant cette semaine.</div>'; }
+  else {
+    alerts.forEach(a => {
+      html += `<div class="alert-item">
+        <div class="alert-icon alert-${a.type}" style="font-size:12px">${a.icon}</div>
+        <span style="color:var(--text);line-height:1.5">${a.msg}</span>
+      </div>`;
+    });
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILITAIRES
+// ─────────────────────────────────────────────────────────────────────────────
+function dl(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename; a.click();
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+initDate();
+renderForm();
+loadEntries();
+</script>
+</body>
+</html>
